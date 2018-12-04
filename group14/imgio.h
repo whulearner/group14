@@ -15,5 +15,6 @@ public:
 	void ImgShow(const string name, Mat img);
 	virtual ~imgio(void);
 
+	Mat m_img, m_RGB, m_gray, m_result, m_HISresult;
 };
 

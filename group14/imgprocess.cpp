@@ -2,10 +2,10 @@
 #include "imgprocess.h"
 
 #define PI 3.141592653
-#define sqrt3 1.7320508075689 
+#define sqrt3 1.7320508075689
 
-void TransformRGBtoIHS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float*Saturation);
-void TransformIHStoRGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Saturation);
+void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float*Saturation);
+void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Saturation);
 void Histogrammatch(float *pPrincipalImageI, Mat HighData, Mat srcImg);
 
 
@@ -31,7 +31,7 @@ int imgprocess::ImgHISFusion(Mat imgRGB,Mat imgGray,Mat& result){
 	Mat HISafter(RGB.rows, RGB.cols, CV_8UC3, Scalar(0, 0, 0));
 	//读取高分辨率图像
 	Mat HighGraph = imgGray;
-	//新建MSData数组存储原图图像数据
+	//新建数组存储原图图像数据
 	float * MSData = new float[RGB.rows*RGB.cols * 3];
 	for (int k = 0; k<3; k++) {
 		for (int i = 0; i<RGB.rows; i++)
@@ -42,20 +42,18 @@ int imgprocess::ImgHISFusion(Mat imgRGB,Mat imgGray,Mat& result){
 			}
 		}
 	}
-	//新建Intensity，Hue,Saturation三个数组存储高分辨率图像的强度，色调，饱和度。
+	//新建Intensity，Hue，Saturation三个数组存储高分辨率图像的强度，色调，饱和度。
 	float * Intensity = new float[RGB.rows*RGB.cols];
 	float * Hue = new float[RGB.rows*RGB.cols];
 	float * Saturation = new float[RGB.rows*RGB.cols];
-
-
-	//对多光谱图像进行ISH变换
-	TransformRGBtoIHS(RGB, MSData, Intensity, Hue, Saturation);
-
-	//高分辨率图像与I进行匹配
+	
+	//对多光谱图像进行HIS变换，变换代码封装在一个函数中
+	TransRGB2HIS(RGB, MSData, Intensity, Hue, Saturation);
+	//高分辨率图像与I进行直方图匹配，代码封装在一个函数中
 	Histogrammatch(Intensity, HighGraph, RGB);
+	//对多光谱图像进行RGB变换，变换代码封装在一个函数中
+	TransHIS2RGB(RGB, MSData, Intensity, Hue, Saturation);
 
-	//对多光谱图像进行ISH逆变换
-	TransformIHStoRGB(RGB, MSData, Intensity, Hue, Saturation);
 	//将变换完成后的结果赋予图像
 	for (int k = 0; k<3; k++) {
 		for (int i = 0; i<RGB.rows; i++)
@@ -63,21 +61,23 @@ int imgprocess::ImgHISFusion(Mat imgRGB,Mat imgGray,Mat& result){
 			for (int j = 0; j<RGB.cols; j++)
 			{
 				int fTemp = MSData[RGB.cols*i + j + RGB.cols*RGB.rows*k];
+				//保证灰阶取值在0-255范围内
 				HISafter.at<Vec3b>(i, j)[k] = max(0, min(fTemp, 255));
 			}
 		}
 	}
 
-	imshow("HIS-Transformation.bmp", HISafter);
-	waitKey(0);
-	imshow("original", imgRGB);
-	waitKey(0);
+	//imshow("HIS-Transformation.bmp", HISafter);
+	//waitKey(0);
+	//imshow("original", imgRGB);
+	//waitKey(0);
+
 	result = HISafter;
 	return 1;
 }
 
 
-void TransformRGBtoIHS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float* Saturation)
+void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float* Saturation)
 {
 	float r, g, b, I, H, S;
 	int RowsNum = srcImg.rows;
@@ -91,19 +91,12 @@ void TransformRGBtoIHS(Mat srcImg, float * RGB, float* Intensity, float* Hue, fl
 			r = srcImg.at<Vec3b>(i, j)[2];
 
 			I = float((r + g + b) / sqrt3);
-			//if(g>=b)
-			//H=atan2f((2*r-g-b),(sqrt(3)*(g-b)));
-			//else
-			//H=atan2f((2*r-g-b),(sqrt(3)*(g-b)))+PI;
-
-			//S=sqrt(6)*sqrt((r-g)*(r-g)+(r-b)*(g-b))/3;
 			float m = min(min(r, g), b);
 			S = float(1 - sqrt3 * m / I);
 			double f = 0.5*(2 * r - g - b) / sqrt((r - g)*(r - g) + (r - b)*(g - b));
 			if (g >= b) H = float(acos(f));
 			else H = float(2 * PI - acos(f));
-
-
+			
 			Intensity[i*ColsNum + j] = I;
 			Hue[i*ColsNum + j] = H;
 			Saturation[i*ColsNum + j] = S;
@@ -111,7 +104,7 @@ void TransformRGBtoIHS(Mat srcImg, float * RGB, float* Intensity, float* Hue, fl
 	}
 }
 
-void TransformIHStoRGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Saturation)
+void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Saturation)
 {
 	float R, G, B;
 	float I, H, S;
