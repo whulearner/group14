@@ -10,6 +10,10 @@ void Histogrammatch(float *pPrincipalImageI, Mat HighData, Mat srcImg);
 double corrcoef(vector<double> a, vector<double> b);
 float fastinvSqrt(float x);
 
+bool transferimage(Mat image, int x, int y);
+Mat zoomimage(Mat image, double kx, double ky);
+Mat rotateimage(Mat img, double degree);
+
 imgprocess::imgprocess(void)
 {
 }
@@ -268,4 +272,200 @@ float fastinvSqrt(float x)
 	x = *(float*)&i; // convert bits back to float
 	x = x * (1.5 - xhalf * x * x); // Newton step
 	return x;
+}
+
+
+//平移
+bool transferimage(Mat image, int x, int y) {
+	Mat image2;
+	image2.create(image.rows, image.cols, CV_8UC3);//创建一个与原图像等长等宽的图像
+	unsigned char* p1 = image.data;
+	unsigned char* p2 = image2.data;
+
+	imshow("显示图像", image);//显示原图像
+
+	if (x*y > 0) {
+		if (x < 0)//当x，y均小于0时，说明是向左下平移
+		{
+			x = -x;//将x, y统一为正数
+			y = -y;
+			for (int i = 0; i < image.rows - y; i++)
+			{
+				for (int j = 0; j < image.cols - x; j++)
+				{
+					p2[((i + y)*image2.cols + j) * 3] = p1[3 * (i*image.cols + j + x)];//分通道平移
+					p2[((i + y)*image2.cols + j) * 3 + 1] = p1[3 * (i*image.cols + j + x) + 1];
+					p2[((i + y)*image2.cols + j) * 3 + 2] = p1[3 * (i*image.cols + j + x) + 2];
+				}
+			}
+		}
+		else //x, y均大于0，说明是向右上平移
+		{
+			for (int i = 0; i < image.rows - y; i++)
+			{
+				for (int j = image.cols - 1; j >= x; j--)
+				{
+					p2[(i*image2.cols + j) * 3] = p1[3 * ((i + y)*image.cols + j - x)];
+					p2[(i*image2.cols + j) * 3 + 1] = p1[3 * ((i + y)*image.cols + j - x) + 1];
+					p2[(i*image2.cols + j) * 3 + 2] = p1[3 * ((i + y)*image.cols + j - x) + 2];
+				}
+			}
+		}
+	}
+	else {
+		if (x < 0)//x < 0,y > 0, 说明是向左上平移
+		{
+			x = -x;//将x, y统一为正数
+			for (int i = 0; i < image.rows - y; i++)
+			{
+				for (int j = 0; j <= image.cols - x; j++)
+				{
+					p2[(i*image2.cols + j) * 3] = p1[3 * ((i + y)*image.cols + j + x)];
+					p2[(i*image2.cols + j) * 3 + 1] = p1[3 * ((i + y)*image.cols + j + x) + 1];
+					p2[(i*image2.cols + j) * 3 + 2] = p1[3 * ((i + y)*image.cols + j + x) + 2];
+				}
+			}
+		}
+		else//x 〉0,y < 0, 说明是向右下平移
+		{
+			y = -y;//将x, y统一为正数
+			for (int i = image.rows - 1; i >= y; i--)
+			{
+				for (int j = image.cols - 1; j >= x; j--)
+				{
+					p2[(i*image2.cols + j) * 3] = p1[3 * ((i - y)*image.cols + j - x)];
+					p2[(i*image2.cols + j) * 3 + 1] = p1[3 * ((i - y)*image.cols + j - x) + 1];
+					p2[(i*image2.cols + j) * 3 + 2] = p1[3 * ((i - y)*image.cols + j - x) + 2];
+				}
+			}
+
+		}
+	}
+	if ((x == 0) & (y == 0))//均为0 时不平移，直接将原图赋给输出图。注意到，x，y只有一个等于0 的情况已经包含在上面的else语句中
+	{
+		image2 = image;
+	}
+	imshow("transimgout", image2);
+	waitKey(0);
+	return 1;
+}
+
+//缩放
+Mat zoomimage(Mat image, double kx, double ky) {
+
+	int newwidth = image.cols*kx;//定义缩放比率
+	int newheight = image.rows*ky;
+
+	Mat image2;
+	image2.create(newheight, newwidth, CV_8UC3);
+	unsigned char* p1 = image.data;
+	unsigned char* p2 = image2.data;
+	imshow("显示图像", image);
+
+	for (int i = 0; i < newheight; i++)
+	{
+		for (int j = 0; j <= newwidth; j++)//分通道最近邻像素采样
+		{
+			p2[(i*image2.cols + j) * 3] = p1[3 * (((int)(i / ky))*image.cols + (int)(j / kx))];
+			p2[(i*image2.cols + j) * 3 + 1] = p1[3 * (((int)(i / ky))*image.cols + (int)(j / kx)) + 1];
+			p2[(i*image2.cols + j) * 3 + 2] = p1[3 * (((int)(i / ky))*image.cols + (int)(j / kx)) + 2];
+		}
+	}
+
+	imshow("zoomimgout", image2);
+	waitKey(0);
+	return image2;
+}
+
+
+//旋转
+Mat rotateimage(Mat img, double degree) {
+	int width = img.cols;
+	int height = img.rows;
+	Mat img2;
+	unsigned char* p1 = img.data;
+
+	int tempLength = sqrt((double)width * width + (double)height *height) + 10;//保证原图可以任意角度旋转 
+	img2.create(tempLength, tempLength, CV_8UC3);
+	unsigned char* p2 = img2.data;
+
+
+	//逆时针旋转到pdst的中心，其它用0填充
+	//pSrc,srcW,srcH原图及其尺寸
+	//pDst,dstW,dstH旋转后图像及其尺寸
+
+	unsigned char* pSrc = p1;
+	unsigned char* pDst = p2;
+	int nchannel = 3;//通道数
+	int srcH = img.rows;
+	int srcW = img.cols;
+	int dstW = tempLength;
+	int dstH = tempLength;
+	int k;
+	double angle = degree * 3.14159265358979 / 180.0;	//旋转角度
+	double co = cos(angle);	//余弦
+	double si = sin(angle);	//正弦
+	int rotateW, rotateH;	//旋转后图像的高宽
+	int srcWidthStep = srcW * nchannel;//宽度步长
+	int dstWisthStep = dstW * nchannel;
+	int x, y;
+	int xMin, xMax, yMin, yMax;
+	int xOff, yOff;	//偏移
+	double xSrc = 0.;
+	double ySrc = 0.;	//变换后图像的坐标在原图中的坐标
+
+						//临时变量
+	float valueTemp = 0.;
+	float a1, a2, a3, a4;
+
+	memset(pDst, 0, dstWisthStep*dstH * sizeof(unsigned char));
+	//计算旋转后的坐标范围
+	rotateH = srcW * fabs(si) + srcH * fabs(co);
+	rotateW = srcW * fabs(co) + srcH * fabs(si);
+
+	//计算偏移
+	xOff = dstW / 2;
+	yOff = dstH / 2;
+
+	yMin = (dstH - rotateH) / 2.0;
+	yMax = yMin + rotateH + 1;	//加1
+	xMin = (dstW - rotateW) / 2.0;
+	xMax = xMin + rotateW + 1;
+
+	for (y = yMin; y <= yMax; y++)
+	{
+		for (x = xMin; x <= xMax; x++)
+		{
+			//求取在原图中的坐标
+			ySrc = si * double(x - xOff) + co * double(y - yOff) + double(int(srcH / 2));
+			xSrc = co * double(x - xOff) - si * double(y - yOff) + double(int(srcW / 2));
+
+			//如果在原图范围内
+			if (ySrc >= 0. && ySrc < srcH - 0.5 && xSrc >= 0. && xSrc < srcW - 0.5)
+			{
+				//插值
+				int xSmall = floor(xSrc);
+				int xBig = ceil(xSrc);
+				int ySmall = floor(ySrc);
+				int yBig = ceil(ySrc);
+
+				for (k = 0; k < nchannel; k++)
+				{
+					a1 = (xSmall >= 0 && ySmall >= 0 ? pSrc[ySmall*srcWidthStep + xSmall * nchannel + k] : 0);
+					a2 = (xBig < srcW && ySmall >= 0 ? pSrc[ySmall*srcWidthStep + xBig * nchannel + k] : 0);
+					a3 = (xSmall >= 0 && yBig < srcH ? pSrc[yBig*srcWidthStep + xSmall * nchannel + k] : 0);
+					a4 = (xBig < srcW && yBig < srcH ? pSrc[yBig*srcWidthStep + xBig * nchannel + k] : 0);
+					double ux = xSrc - xSmall;
+					double uy = ySrc - ySmall;
+					//双线性插值
+					valueTemp = (1 - ux)*(1 - uy)*a1 + (1 - ux)*uy*a3 + (1 - uy)*ux*a2 + ux * uy*a4;
+					pDst[y*dstWisthStep + x * nchannel + k] = floor(valueTemp);
+				}
+			}
+		}
+	}
+
+	imshow("rotateimgout", img2);
+	waitKey(0);
+	return img2;
 }
