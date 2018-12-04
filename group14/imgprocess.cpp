@@ -7,7 +7,8 @@
 void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float*Saturation);
 void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Saturation);
 void Histogrammatch(float *pPrincipalImageI, Mat HighData, Mat srcImg);
-
+double corrcoef(vector<double> a, vector<double> b);
+float fastinvSqrt(float x);
 
 imgprocess::imgprocess(void)
 {
@@ -83,13 +84,13 @@ int imgprocess::ImgCloudExtract(Mat R, Mat G, Mat B, Mat & result)
 	{
 		for (int c = 0; c < result.cols; c++)
 		{
-			if (R.at<uchar>(r*result.cols + c) + G.at<uchar>(r*result.cols + c) + B.at<uchar>(r*result.cols + c) > 750)
+			if (R.at<uchar>(r, c) + G.at<uchar>(r, c) + B.at<uchar>(r, c) > 750)
 			{
-				result.at<uchar>(r*result.cols + c) = 255;
+				result.at<uchar>(r, c) = 255;
 			}
 			else
 			{
-				result.at<uchar>(r*result.cols + c) = 0;
+				result.at<uchar>(r, c) = 0;
 			}
 		}
 	}
@@ -110,14 +111,14 @@ int imgprocess::ImgWaterExtract(Mat G, Mat NIR, Mat & result)
 	{
 		for (int c = 0; c < G.cols; c++)
 		{
-			NDWI.at<float>(r*G.cols + c) = (float)(G.at<uchar>(r*G.cols + c) - NIR.at<uchar>(r*G.cols + c)) / (G.at<uchar>(r*G.cols + c) + NIR.at<uchar>(r*G.cols + c));
-			if (NDWI.at<float>(r*G.cols + c)>0.35)
+			NDWI.at<float>(r, c) = (float)(G.at<uchar>(r, c) - NIR.at<uchar>(r, c)) / (G.at<uchar>(r, c) + NIR.at<uchar>(r, c));
+			if (NDWI.at<float>(r, c)>0.35)
 			{
-				result.at<uchar>(r*G.cols + c) = 255;
+				result.at<uchar>(r, c) = 255;
 			}
 			else
 			{
-				result.at<uchar>(r*G.cols + c) = 0;
+				result.at<uchar>(r, c) = 0;
 			}
 		}
 	}
@@ -236,4 +237,35 @@ void Histogrammatch(float *pPrincipalImageI, Mat HighData, Mat srcImg) {
 			pPrincipalImageI[i*HighData.cols + j] = Panch;
 		}
 	}
+}
+
+double corrcoef(vector<double> a, vector<double> b) {
+	if (sizeof(a) != sizeof(b))
+	{
+		printf_s("a!=b\n");
+		return 0;
+	}
+	int atotal = a.size();
+	float asum = 0, bsum = 0, a2sum = 0, b2sum = 0, absum = 0, result = 0;
+	for (int i = 0; i < atotal; i++)
+	{
+		asum += a[i];
+		bsum += b[i];
+		a2sum += a[i] * a[i];
+		b2sum += b[i] * b[i];
+		absum += a[i] * b[i];
+	}
+	result = (absum - asum * bsum / atotal) * fastinvSqrt((a2sum - asum * asum / atotal)*(b2sum - bsum * bsum / atotal));
+	return result;
+}
+
+
+float fastinvSqrt(float x)
+{
+	float xhalf = 0.5 * x;
+	int i = *(int*)&x; // get bits for floating value
+	i = 0x5f3759df - (i >> 1); // gives initial guess
+	x = *(float*)&i; // convert bits back to float
+	x = x * (1.5 - xhalf * x * x); // Newton step
+	return x;
 }
