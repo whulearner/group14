@@ -76,6 +76,64 @@ int imgprocess::ImgHISFusion(Mat imgRGB,Mat imgGray,Mat& result){
 	return 1;
 }
 
+int imgprocess::ImgCloudExtract(Mat R, Mat G, Mat B, Mat & result)
+{
+	result.create(R.rows, R.cols, CV_8UC1);
+	for (int r = 0; r < result.rows; r++)
+	{
+		for (int c = 0; c < result.cols; c++)
+		{
+			if (R.at<uchar>(r*result.cols + c) + G.at<uchar>(r*result.cols + c) + B.at<uchar>(r*result.cols + c) > 750)
+			{
+				result.at<uchar>(r*result.cols + c) = 255;
+			}
+			else
+			{
+				result.at<uchar>(r*result.cols + c) = 0;
+			}
+		}
+	}
+	Mat temp;
+	temp.create(result.rows, result.cols, CV_8UC1);
+	Mat SE = getStructuringElement(MORPH_ELLIPSE, Size(10, 10));
+	erode(result, temp, SE);
+	dilate(temp, result, SE);
+	return 0;
+}
+
+int imgprocess::ImgWaterExtract(Mat G, Mat NIR, Mat & result)
+{
+	Mat NDWI;
+	NDWI.create(G.rows, G.cols, CV_32FC1);
+	result.create(G.rows, G.cols, CV_8UC1);
+	for (int r = 0; r < G.rows; r++)
+	{
+		for (int c = 0; c < G.cols; c++)
+		{
+			NDWI.at<float>(r*G.cols + c) = (float)(G.at<uchar>(r*G.cols + c) - NIR.at<uchar>(r*G.cols + c)) / (G.at<uchar>(r*G.cols + c) + NIR.at<uchar>(r*G.cols + c));
+			if (NDWI.at<float>(r*G.cols + c)>0.35)
+			{
+				result.at<uchar>(r*G.cols + c) = 255;
+			}
+			else
+			{
+				result.at<uchar>(r*G.cols + c) = 0;
+			}
+		}
+	}
+
+	return 0;
+}
+
+void imgprocess::ImgGray2RGB(Mat B, Mat G, Mat R, Mat & RGB)
+{
+	vector<Mat> channels;
+	channels.push_back(R);
+	channels.push_back(G);
+	channels.push_back(B);
+	merge(channels, RGB);
+}
+
 
 void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float* Saturation)
 {
