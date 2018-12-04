@@ -154,7 +154,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="6and9.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="imgio.cpp" />
     <ClCompile Include="imgprocess.cpp" />
     <ClCompile Include="stdafx.cpp">
