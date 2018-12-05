@@ -14,7 +14,7 @@ public:
 	bool ImgWrite(const string path, Mat img);
 	void ImgShow(const string name, Mat img);
 	virtual ~imgio(void);
-
+public:
 	Mat m_img, m_RGB, m_gray, m_result;
 };
 

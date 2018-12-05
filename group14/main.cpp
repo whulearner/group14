@@ -11,7 +11,7 @@ using namespace cv;
 
 
 int main (){
-
+	/*
 	imgprocess testHIS;
 	testHIS.m_RGB = testHIS.ImgRead("D:\\Users\\lenovo\\source\\repos\\group14\\group14\\image\\HIS\\ik_beijing_c.bmp");
 	testHIS.m_gray = testHIS.ImgRead("D:\\Users\\lenovo\\source\\repos\\group14\\group14\\image\\HIS\\ik_beijing_p.bmp", 0);
@@ -31,7 +31,15 @@ int main (){
 
 	testCloudAndWater.ImgWaterExtract(testCloudAndWater.G, testCloudAndWater.NIR, testCloudAndWater.m_Watresult);
 	testCloudAndWater.ImgWrite(".\\image\\WaterExtract.bmp", testCloudAndWater.m_Watresult);
-
+	*/
+	imgprocess testSpaceFusion;
+	testSpaceFusion.B = testSpaceFusion.ImgRead("D:\\Users\\lenovo\\source\\repos\\group14\\group14\\image\\fusion\\tm1.bmp", 0);
+	testSpaceFusion.G = testSpaceFusion.ImgRead("D:\\Users\\lenovo\\source\\repos\\group14\\group14\\image\\fusion\\tm3.bmp", 0);
+	testSpaceFusion.R = testSpaceFusion.ImgRead("D:\\Users\\lenovo\\source\\repos\\group14\\group14\\image\\fusion\\tm4.bmp", 0);
+	testSpaceFusion.m_gray = testSpaceFusion.ImgRead("D:\\Users\\lenovo\\source\\repos\\group14\\group14\\image\\fusion\\sp_yc.bmp", 0);
+	testSpaceFusion.ImgGray2RGB(testSpaceFusion.B, testSpaceFusion.G, testSpaceFusion.R, testSpaceFusion.m_RGB);
+	testSpaceFusion.ImgSpaceFusion(testSpaceFusion.R, testSpaceFusion.G, testSpaceFusion.B, testSpaceFusion.m_gray, testSpaceFusion.m_imgproc);
+	testSpaceFusion.ImgWrite(".\\image\\SpaceFusion.bmp", testSpaceFusion.m_imgproc);
 
 	return 0;
 }
