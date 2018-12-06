@@ -9,7 +9,7 @@ class imgprocess:public imgio
 {
 public:
 	imgprocess(void);
-	int ImgSpaceFusion(Mat R, Mat G, Mat B, Mat img2, Mat& result);
+	int ImgSpaceFusion(Mat R, Mat G, Mat B, Mat img2, Mat& result, int flag = 1);
 	int ImgHISFusion(Mat RGB,Mat gray,Mat& result);
 	int ImgCloudExtract(Mat R, Mat G, Mat B, Mat& result);
 	int ImgWaterExtract(Mat G, Mat NIR, Mat& result);

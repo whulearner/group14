@@ -7,8 +7,11 @@
 void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float*Saturation);
 void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Saturation);
 void Histogrammatch(float *pPrincipalImageI, Mat HighData, Mat srcImg);
-double corrcoef(vector<double> a, vector<double> b);
+float corrcoef(Mat a, Mat b);
 float fastinvSqrt(float x);
+
+using namespace cv;
+using namespace std;
 
 imgprocess::imgprocess(void)
 {
@@ -20,7 +23,78 @@ imgprocess::~imgprocess(void)
 }
 
 
-int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result) {	Mat Ref, resR, resG, resB, temp3, temp4, temp1, fusR, fusG, fusB, fusRGB;	Ref.create(1800, 1800, CV_8UC1);	temp1.create(1800, 1800, CV_8UC1);	temp3.create(1800, 1800, CV_8UC1);	temp4.create(1800, 1800, CV_8UC1);	fusR.create(1800, 1800, CV_8UC1);	fusG.create(1800, 1800, CV_8UC1);	fusB.create(1800, 1800, CV_8UC1);	resize(R, resR, Size(1341, 1563));	resize(G, resG, Size(1341, 1563));	resize(B, resB, Size(1341, 1563));	for (int r = 0; r < Ref.rows; r++) {		for (int c = 0; c < Ref.cols; c++)		{			if (r >= 200 & r < 1701 & c >= 100 & c < 1601) {				Ref.at<uchar>(r, c) = P.at<uchar>(r - 200, c - 100);			}			else {				Ref.at<uchar>(r, c) = 0;			}			if (r >= 120 & r < 1683 & c >= 182 & c < 1523) {				temp3.at<uchar>(r, c) = resR.at<uchar>(r - 120, c - 182);				temp4.at<uchar>(r, c) = resG.at<uchar>(r - 120, c - 182);				temp1.at<uchar>(r, c) = resB.at<uchar>(r - 120, c - 182);			}			else			{				temp3.at<uchar>(r, c) = 0;				temp4.at<uchar>(r, c) = 0;				temp1.at<uchar>(r, c) = 0;			}			fusR.at<uchar>(r, c) = Ref.at<uchar>(r, c)*0.5 + temp3.at<uchar>(r, c)*0.5;			fusG.at<uchar>(r, c) = Ref.at<uchar>(r, c)*0.5 + temp4.at<uchar>(r, c)*0.5;			fusB.at<uchar>(r, c) = Ref.at<uchar>(r, c)*0.5 + temp1.at<uchar>(r, c)*0.5;		}	}	vector<Mat> channels;	channels.push_back(fusR);	channels.push_back(fusG);	channels.push_back(fusB);	merge(channels, fusRGB);	imwrite(".\\image\\sp_yc_fusRGB.bmp", fusRGB);	imwrite(".\\image\\sp_yc_Ref.bmp", Ref);	imwrite(".\\image\\tm1_resize.bmp", temp1);	imwrite(".\\image\\tm3_resize.bmp", temp3);	imwrite(".\\image\\tm4_resize.bmp", temp4);	result = fusRGB;	return 0;}
+int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result,int flag) {
+	Mat Ref, resR, resG, resB, temp3, temp4, temp1, fusR, fusG, fusB, fusRGB;
+	Ref.create(1800, 1800, CV_8UC1);
+	temp1.create(1800, 1800, CV_8UC1);
+	temp3.create(1800, 1800, CV_8UC1);
+	temp4.create(1800, 1800, CV_8UC1);
+	fusR.create(1800, 1800, CV_8UC1);
+	fusG.create(1800, 1800, CV_8UC1);
+	fusB.create(1800, 1800, CV_8UC1);
+
+	resize(R, resR, Size(R.cols * 3, R.rows * 3));
+	resize(G, resG, Size(G.cols * 3, R.rows * 3));
+	resize(B, resB, Size(B.cols * 3, R.rows * 3));
+
+	for (int r = 0; r < Ref.rows; r++) {
+		for (int c = 0; c < Ref.cols; c++)
+		{
+			if (r >= 200 & r < 200 + P.rows & c >= 100 & c < 100 + P.cols) {
+				Ref.at<uchar>(r, c) = P.at<uchar>(r - 200, c - 100);
+			}
+			else {
+				Ref.at<uchar>(r, c) = 0;
+			}
+			if (r >= 120 & r < 120 + resR.rows & c >= 182 & c < 182 + resR.cols) {
+				temp3.at<uchar>(r, c) = resR.at<uchar>(r - 120, c - 182);
+				temp4.at<uchar>(r, c) = resG.at<uchar>(r - 120, c - 182);
+				temp1.at<uchar>(r, c) = resB.at<uchar>(r - 120, c - 182);
+			}
+			else
+			{
+				temp3.at<uchar>(r, c) = 0;
+				temp4.at<uchar>(r, c) = 0;
+				temp1.at<uchar>(r, c) = 0;
+			}
+		}
+	}
+
+	float corr[3] = { 0 };
+	if (flag == 1) {
+		corr[0] = fabs(corrcoef(temp3, Ref));
+		corr[1] = fabs(corrcoef(temp4, Ref));
+		corr[2] = fabs(corrcoef(temp1, Ref));
+	}
+	else
+	{
+		corr[2] = corr[1] = corr[0] = 0;
+	}
+
+	for (int r = 0; r < Ref.rows; r++) {
+		for (int c = 0; c < Ref.cols; c++)
+		{
+			fusR.at<uchar>(r, c) = Ref.at<uchar>(r, c)*(1 + corr[0])*0.5 + temp3.at<uchar>(r, c)*(1 - corr[0])*0.5;
+			fusG.at<uchar>(r, c) = Ref.at<uchar>(r, c)*(1 + corr[1])*0.5 + temp4.at<uchar>(r, c)*(1 - corr[1])*0.5;
+			fusB.at<uchar>(r, c) = Ref.at<uchar>(r, c)*(1 + corr[2])*0.5 + temp1.at<uchar>(r, c)*(1 - corr[2])*0.5;
+		}
+	}
+
+	vector<Mat> channels;
+	channels.push_back(fusR);
+	channels.push_back(fusG);
+	channels.push_back(fusB);
+	merge(channels, fusRGB);
+
+	//imwrite(".\\image\\sp_yc_Ref.bmp", Ref);
+	//imwrite(".\\image\\tm1_resize.bmp", temp1);
+	//imwrite(".\\image\\tm3_resize.bmp", temp3);
+	//imwrite(".\\image\\tm4_resize.bmp", temp4);
+
+	result = fusRGB;
+	return 0;
+}
+
 
 int imgprocess::ImgHISFusion(Mat imgRGB,Mat imgGray,Mat& result){
 	Mat RGB = imgRGB;
@@ -166,7 +240,6 @@ void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Satur
 	int height = M0.rows;
 	int width = M0.cols;
 
-	float s1 = sqrt(3.0);
 	for (int i = 0; i<height; i++) {
 		for (int j = 0; j<width; j++) {
 			I = Intensity[i*width + j];
@@ -235,23 +308,27 @@ void Histogrammatch(float *pPrincipalImageI, Mat HighData, Mat srcImg) {
 	}
 }
 
-double corrcoef(vector<double> a, vector<double> b) {
-	if (sizeof(a) != sizeof(b))
+float corrcoef(Mat a, Mat b) {
+	if (a.rows != b.rows)
 	{
 		printf_s("a!=b\n");
 		return 0;
 	}
-	int atotal = a.size();
+	float total = a.rows*a.cols;
 	float asum = 0, bsum = 0, a2sum = 0, b2sum = 0, absum = 0, result = 0;
-	for (int i = 0; i < atotal; i++)
+	for (int r = 0; r < a.rows; r++)
 	{
-		asum += a[i];
-		bsum += b[i];
-		a2sum += a[i] * a[i];
-		b2sum += b[i] * b[i];
-		absum += a[i] * b[i];
+		for (int c = 0; c < a.cols; c++)
+		{
+			asum += a.at<uchar>(r, c);
+			bsum += b.at<uchar>(r, c);
+			a2sum += a.at<uchar>(r, c) * a.at<uchar>(r, c);
+			b2sum += b.at<uchar>(r, c) * b.at<uchar>(r, c);
+			absum += a.at<uchar>(r, c) * b.at<uchar>(r, c);
+		}
 	}
-	result = (absum - asum * bsum / atotal) * fastinvSqrt((a2sum - asum * asum / atotal)*(b2sum - bsum * bsum / atotal));
+
+	result = (absum - asum * bsum / total) * fastinvSqrt((a2sum - asum * asum / total)*(b2sum - bsum * bsum / total));
 	return result;
 }
 
