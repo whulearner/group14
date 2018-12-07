@@ -26,14 +26,19 @@ int main (){
 
 	if (flag==1)
 	{
+		int isr = 1;
+		printf_s("加权输入1，非加权输入0\n现在输入：");
+		scanf_s("%d",&isr);
 		imgprocess testSpaceFusion;
 		testSpaceFusion.B = testSpaceFusion.ImgRead(".\\image\\tm1.bmp", 0);
 		testSpaceFusion.G = testSpaceFusion.ImgRead(".\\image\\tm3.bmp", 0);
 		testSpaceFusion.R = testSpaceFusion.ImgRead(".\\image\\tm4.bmp", 0);
 		testSpaceFusion.m_gray = testSpaceFusion.ImgRead(".\\image\\sp_yc.bmp", 0);
 		testSpaceFusion.ImgGray2RGB(testSpaceFusion.B, testSpaceFusion.G, testSpaceFusion.R, testSpaceFusion.m_RGB);
-		testSpaceFusion.ImgSpaceFusion(testSpaceFusion.R, testSpaceFusion.G, testSpaceFusion.B, testSpaceFusion.m_gray, testSpaceFusion.m_imgproc, 1);
-		testSpaceFusion.ImgWrite(".\\result\\SpaceFusion.bmp", testSpaceFusion.m_imgproc);
+		testSpaceFusion.ImgSpaceFusion(testSpaceFusion.R, testSpaceFusion.G, testSpaceFusion.B, testSpaceFusion.m_gray, testSpaceFusion.m_imgproc, isr);
+		if(isr == 1) testSpaceFusion.ImgWrite(".\\result\\SpaceFusionR.bmp", testSpaceFusion.m_imgproc);
+		if(isr == 0) testSpaceFusion.ImgWrite(".\\result\\SpaceFusion.bmp", testSpaceFusion.m_imgproc);
+		//testSpaceFusion.ImgShow("DirectRGB",testSpaceFusion.m_RGB);
 		testSpaceFusion.ImgShow("result", testSpaceFusion.m_imgproc);
 	}
 
@@ -69,6 +74,7 @@ int main (){
 				testCloudAndWater.RGB.at<Vec3b>(r, c)[1] = max(0, testCloudAndWater.RGB.at<Vec3b>(r, c)[1] - testCloudAndWater.m_Cloudresult.at<uchar>(r, c));
 				testCloudAndWater.RGB.at<Vec3b>(r, c)[2] = max(testCloudAndWater.RGB.at<Vec3b>(r, c)[2], testCloudAndWater.m_Cloudresult.at<uchar>(r, c));
 			}
+			if(r%360==1) printf_s("%.2f%% RGB produced.\n",100.0*r/testCloudAndWater.RGB.rows);
 		}
 		testCloudAndWater.ImgWrite(".\\result\\WaterAndCloudExtract.bmp", testCloudAndWater.RGB);
 		testCloudAndWater.ImgShow("testCloudAndWater", testCloudAndWater.RGB);

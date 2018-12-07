@@ -2,7 +2,9 @@
 #include "imgprocess.h"
 
 #define PI 3.141592653
-#define sqrt3 1.7320508075689
+
+#define sqrt3 1.7320508075689//定义根号3的值避免反复调用开方函数来加快运算速度
+
 
 void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float*Saturation);
 void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Saturation);
@@ -22,9 +24,12 @@ imgprocess::~imgprocess(void)
 {
 }
 
-
+//空间域加权融合
 int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result,int flag) {
 	Mat Ref, resR, resG, resB, temp3, temp4, temp1, fusR, fusG, fusB, fusRGB;
+
+	//创建一个比原全色波段图稍大的图
+	//便于之后的坐标系配准
 	Ref.create(1800, 1800, CV_8UC1);
 	temp1.create(1800, 1800, CV_8UC1);
 	temp3.create(1800, 1800, CV_8UC1);
@@ -33,6 +38,8 @@ int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result,int flag)
 	fusG.create(1800, 1800, CV_8UC1);
 	fusB.create(1800, 1800, CV_8UC1);
 
+	//将彩色图重采样至原来的三倍
+	//这是因为彩图的GSD是30m，而高分辨率的那张图GSD是10m
 	resize(R, resR, Size(R.cols * 3, R.rows * 3));
 	resize(G, resG, Size(G.cols * 3, R.rows * 3));
 	resize(B, resB, Size(B.cols * 3, R.rows * 3));
@@ -40,16 +47,17 @@ int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result,int flag)
 	for (int r = 0; r < Ref.rows; r++) {
 		for (int c = 0; c < Ref.cols; c++)
 		{
-			if (r >= 200 & r < 200 + P.rows & c >= 100 & c < 100 + P.cols) {
-				Ref.at<uchar>(r, c) = P.at<uchar>(r - 200, c - 100);
+			if (r >= 200 && r < 200 + P.rows && c >= 100 && c < 100 + P.cols) {
+				Ref.at<uchar>(r, c) = P.at<uchar>(r - 200, c - 100);//把图放在靠中间一点
 			}
 			else {
 				Ref.at<uchar>(r, c) = 0;
 			}
-			if (r >= 120 & r < 120 + resR.rows & c >= 182 & c < 182 + resR.cols) {
-				temp3.at<uchar>(r, c) = resR.at<uchar>(r - 120, c - 182);
-				temp4.at<uchar>(r, c) = resG.at<uchar>(r - 120, c - 182);
-				temp1.at<uchar>(r, c) = resB.at<uchar>(r - 120, c - 182);
+			if (r >= 120 && r < 120 + resR.rows && c >= 184 && c < 184 + resR.cols) {
+				//这里的120、184是根据图像左上角坐标运算过来的
+				temp3.at<uchar>(r, c) = resR.at<uchar>(r - 120, c - 184);
+				temp4.at<uchar>(r, c) = resG.at<uchar>(r - 120, c - 184);
+				temp1.at<uchar>(r, c) = resB.at<uchar>(r - 120, c - 184);
 			}
 			else
 			{
@@ -58,11 +66,15 @@ int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result,int flag)
 				temp1.at<uchar>(r, c) = 0;
 			}
 		}
+		if(r%100==1) printf_s("%.2f%% processed.\n",50.0*r/Ref.rows);
 	}
 
 	float corr[3] = { 0 };
+	//计算彩色图像各个波段与全色波段图像的相关系数
+	//计算相关系数的绝对值
 	if (flag == 1) {
 		corr[0] = fabs(corrcoef(temp3, Ref));
+		printf_s("%.2f%% processed.\n",50.00);
 		corr[1] = fabs(corrcoef(temp4, Ref));
 		corr[2] = fabs(corrcoef(temp1, Ref));
 	}
@@ -74,10 +86,12 @@ int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result,int flag)
 	for (int r = 0; r < Ref.rows; r++) {
 		for (int c = 0; c < Ref.cols; c++)
 		{
+			//计算加权像素值，非加权则令r=0，这样各权值都是1
 			fusR.at<uchar>(r, c) = Ref.at<uchar>(r, c)*(1 + corr[0])*0.5 + temp3.at<uchar>(r, c)*(1 - corr[0])*0.5;
 			fusG.at<uchar>(r, c) = Ref.at<uchar>(r, c)*(1 + corr[1])*0.5 + temp4.at<uchar>(r, c)*(1 - corr[1])*0.5;
 			fusB.at<uchar>(r, c) = Ref.at<uchar>(r, c)*(1 + corr[2])*0.5 + temp1.at<uchar>(r, c)*(1 - corr[2])*0.5;
 		}
+		if(r%400==1) printf_s("%.2f%% processed.\n",50.0+50.0*r/Ref.rows);
 	}
 
 	//vector<Mat> channels;
@@ -97,7 +111,7 @@ int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result,int flag)
 	return 0;
 }
 
-
+//HIS影像融合函数
 int imgprocess::ImgHISFusion(Mat imgRGB,Mat imgGray,Mat& result){
 	Mat RGB = imgRGB;
 	//初始转换后图片的存储空间
@@ -149,6 +163,7 @@ int imgprocess::ImgHISFusion(Mat imgRGB,Mat imgGray,Mat& result){
 	return 1;
 }
 
+//云层提取
 int imgprocess::ImgCloudExtract(Mat R, Mat G, Mat B, Mat & result)
 {
 	result.create(R.rows, R.cols, CV_8UC1);
@@ -156,6 +171,7 @@ int imgprocess::ImgCloudExtract(Mat R, Mat G, Mat B, Mat & result)
 	{
 		for (int c = 0; c < result.cols; c++)
 		{
+			//基于灰度阈值的提取方法
 			if (R.at<uchar>(r, c) + G.at<uchar>(r, c) + B.at<uchar>(r, c) > 750)
 			{
 				result.at<uchar>(r, c) = 255;
@@ -165,15 +181,19 @@ int imgprocess::ImgCloudExtract(Mat R, Mat G, Mat B, Mat & result)
 				result.at<uchar>(r, c) = 0;
 			}
 		}
+		if(r%360==1) printf_s("%.2f%% cloud processed.\n",100.0*r/result.rows);
 	}
 	Mat temp;
 	temp.create(result.rows, result.cols, CV_8UC1);
+	//创建腐蚀、膨胀运算所用到的窗口算子
 	Mat SE = getStructuringElement(MORPH_ELLIPSE, Size(10, 10));
+	//开运算（先腐蚀再膨胀）
 	erode(result, temp, SE);
 	dilate(temp, result, SE);
 	return 0;
 }
 
+//水体信息提取
 int imgprocess::ImgWaterExtract(Mat G, Mat NIR, Mat & result)
 {
 	Mat NDWI;
@@ -183,6 +203,7 @@ int imgprocess::ImgWaterExtract(Mat G, Mat NIR, Mat & result)
 	{
 		for (int c = 0; c < G.cols; c++)
 		{
+			//归一化差值水体指数
 			NDWI.at<float>(r, c) = (float)(G.at<uchar>(r, c) - NIR.at<uchar>(r, c)) / (G.at<uchar>(r, c) + NIR.at<uchar>(r, c));
 			if (NDWI.at<float>(r, c)>0.35)
 			{
@@ -193,11 +214,13 @@ int imgprocess::ImgWaterExtract(Mat G, Mat NIR, Mat & result)
 				result.at<uchar>(r, c) = 0;
 			}
 		}
+		if(r%360==1) printf_s("%.2f%% water processed.\n",100.0*r/G.rows);
 	}
 
 	return 0;
 }
 
+//将R、G、B三个通道合并在一个图像文件中
 void imgprocess::ImgGray2RGB(Mat B, Mat G, Mat R, Mat & RGB)
 {
 	vector<Mat> channels;
@@ -207,7 +230,7 @@ void imgprocess::ImgGray2RGB(Mat B, Mat G, Mat R, Mat & RGB)
 	merge(channels, RGB);
 }
 
-
+//对多光谱图像进行HIS变换
 void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float* Saturation)
 {
 	float r, g, b, I, H, S;
@@ -220,7 +243,7 @@ void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float* 
 			b = srcImg.at<Vec3b>(i, j)[0];
 			g = srcImg.at<Vec3b>(i, j)[1];
 			r = srcImg.at<Vec3b>(i, j)[2];
-
+			//指导书上的公式
 			I = float((r + g + b) / sqrt3);
 			float m = min(min(r, g), b);
 			S = float(1 - sqrt3 * m / I);
@@ -235,6 +258,7 @@ void TransRGB2HIS(Mat srcImg, float * RGB, float* Intensity, float* Hue, float* 
 	}
 }
 
+//对多光谱图像进行RGB变换
 void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Saturation)
 {
 	float R, G, B;
@@ -247,7 +271,7 @@ void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Satur
 			I = Intensity[i*width + j];
 			H = Hue[i*width + j];
 			S = Saturation[i*width + j];
-
+			//指导书上的公式
 			if (H >= 0 && H<2 * PI / 3)
 			{
 				R = I * ((1 + (S*cos(H) / cos(PI / 3 - H))) / sqrt3);
@@ -273,6 +297,7 @@ void TransHIS2RGB(Mat M0, float * RGB, float* Intensity, float* Hue, float*Satur
 	}
 }
 
+//高分辨率图像与I进行直方图匹配
 void Histogrammatch(float *pPrincipalImageI, Mat HighData, Mat srcImg) {
 
 	double MinHigh, MaxHigh, MinI, MaxI;
@@ -304,12 +329,15 @@ void Histogrammatch(float *pPrincipalImageI, Mat HighData, Mat srcImg) {
 		{
 			float pTemp = (float)HighData.at<uchar>(i, j);
 			Panch = (double)pTemp;
+			//将高分辨率图像的亮度值与低分辨率图像的I值进行直方图匹配
+			//采用线性匹配的方法
 			Panch = double((Panch - MinHigh)*(MaxI - MinI) / (MaxHigh - MinHigh) + MinI);
 			pPrincipalImageI[i*HighData.cols + j] = Panch;
 		}
 	}
 }
 
+//计算相关系数
 float corrcoef(Mat a, Mat b) {
 	if (a.rows != b.rows)
 	{
@@ -334,7 +362,7 @@ float corrcoef(Mat a, Mat b) {
 	return result;
 }
 
-
+//计算开平方的倒数（快速算法）
 float fastinvSqrt(float x)
 {
 	float xhalf = 0.5 * x;

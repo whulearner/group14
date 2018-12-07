@@ -30,5 +30,5 @@ void imgio::ImgShow(const string name, Mat img){
 	resize(img, resImg, Size(600, 600 * img.rows / img.cols));
 	namedWindow(name);
 	imshow(name, resImg);
-	waitKey(10000);
+	waitKey(30000);
 }
