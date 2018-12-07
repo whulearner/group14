@@ -80,11 +80,13 @@ int imgprocess::ImgSpaceFusion(Mat R, Mat G, Mat B, Mat P, Mat& result,int flag)
 		}
 	}
 
-	vector<Mat> channels;
-	channels.push_back(fusR);
-	channels.push_back(fusG);
-	channels.push_back(fusB);
-	merge(channels, fusRGB);
+	//vector<Mat> channels;
+	//channels.push_back(fusR);
+	//channels.push_back(fusG);
+	//channels.push_back(fusB);
+	//merge(channels, fusRGB);
+
+	ImgGray2RGB(fusB, fusG, fusR, fusRGB);
 
 	//imwrite(".\\image\\sp_yc_Ref.bmp", Ref);
 	//imwrite(".\\image\\tm1_resize.bmp", temp1);
@@ -199,9 +201,9 @@ int imgprocess::ImgWaterExtract(Mat G, Mat NIR, Mat & result)
 void imgprocess::ImgGray2RGB(Mat B, Mat G, Mat R, Mat & RGB)
 {
 	vector<Mat> channels;
-	channels.push_back(R);
-	channels.push_back(G);
 	channels.push_back(B);
+	channels.push_back(G);
+	channels.push_back(R);
 	merge(channels, RGB);
 }
 

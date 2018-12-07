@@ -26,6 +26,9 @@ bool imgio::ImgWrite(const string path, Mat img){
 }
 
 void imgio::ImgShow(const string name, Mat img){
-	imshow(name, img);
-	waitKey(0);
+	Mat resImg;
+	resize(img, resImg, Size(600, 600 * img.rows / img.cols));
+	namedWindow(name);
+	imshow(name, resImg);
+	waitKey(10000);
 }
