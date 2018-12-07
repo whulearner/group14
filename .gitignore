@@ -12,6 +12,7 @@
 
 # Image files
 image/
+result/
 
 # Build results
 [Dd]ebug/
