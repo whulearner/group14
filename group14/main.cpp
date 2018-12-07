@@ -56,10 +56,9 @@ int main (){
 		testCloudAndWater.NIR = testCloudAndWater.ImgRead(".\\image\\cloudimage-4.tif", 0);
 		testCloudAndWater.ImgGray2RGB(testCloudAndWater.R, testCloudAndWater.G, testCloudAndWater.B, testCloudAndWater.RGB);
 		testCloudAndWater.ImgCloudExtract(testCloudAndWater.R, testCloudAndWater.G, testCloudAndWater.B, testCloudAndWater.m_Cloudresult);
-		//testCloudAndWater.ImgShow("testCloudAndWater", testCloudAndWater.m_Cloudresult);
-		//testCloudAndWater.ImgWrite(".\\result\\CloudExtractElli.bmp", testCloudAndWater.m_Cloudresult);
+		testCloudAndWater.ImgWrite(".\\result\\CloudExtractElli.bmp", testCloudAndWater.m_Cloudresult);
 		testCloudAndWater.ImgWaterExtract(testCloudAndWater.G, testCloudAndWater.NIR, testCloudAndWater.m_Watresult);
-		//testCloudAndWater.ImgWrite(".\\result\\WaterExtract.bmp", testCloudAndWater.m_Watresult);
+		testCloudAndWater.ImgWrite(".\\result\\WaterExtract.bmp", testCloudAndWater.m_Watresult);
 
 		for (int r = 0; r < testCloudAndWater.RGB.rows; r++)
 		{

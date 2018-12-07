@@ -201,9 +201,9 @@ int imgprocess::ImgWaterExtract(Mat G, Mat NIR, Mat & result)
 void imgprocess::ImgGray2RGB(Mat B, Mat G, Mat R, Mat & RGB)
 {
 	vector<Mat> channels;
-	channels.push_back(B);
-	channels.push_back(G);
 	channels.push_back(R);
+	channels.push_back(G);
+	channels.push_back(B);
 	merge(channels, RGB);
 }
 
