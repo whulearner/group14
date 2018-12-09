@@ -12,11 +12,12 @@ using namespace cv;
 
 
 int main (){
+	int flag = 0;
 	bool idir = CreateDirectory(_T(".\\image"), NULL);
 	bool rdir = CreateDirectory(_T(".\\result"), NULL);
-	if (idir) printf_s("请在程序目录下找到image文件夹，将原始图片放进去。\n");
-	int flag = 0;
-	printf("输入0：退出程序。\n输入1：相关系数融合。\n输入2：HIS融合。\n输入3：云和水体识别。\n现在输入：");
+	if (idir) printf_s("请先退出程序，在程序目录下找到image文件夹，将原始图片放进去。\n");
+	else printf("输入0：退出程序。\n输入1：相关系数融合。\n输入2：HIS融合。\n输入3：云和水体识别。\n现在输入：");
+	
 	scanf_s("%d", &flag);
 
 	if (flag==0)

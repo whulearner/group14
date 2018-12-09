@@ -14,7 +14,7 @@ imgio::~imgio(void)
 Mat imgio::ImgRead(const string path,int flag){
 	Mat img = imread(path, flag);
 	if (!img.data) {
-		img.create(128, 128, CV_16UC1);
+		img.create(128, 128, CV_8UC1);
 		printf_s("failed to open image file\n");
 	}
 	return img;
