@@ -13,6 +13,7 @@ using namespace cv;
 
 int main (){
 	int flag = 0;
+	
 	bool idir = CreateDirectory(_T(".\\image"), NULL);
 	bool rdir = CreateDirectory(_T(".\\result"), NULL);
 	if (idir) {
